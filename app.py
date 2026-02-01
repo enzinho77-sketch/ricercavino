@@ -5,7 +5,7 @@ import urllib.parse
 st.set_page_config(page_title="VinoFinder Fast", layout="wide")
 
 st.title("🍷 VinoFinder Fast - No Blocks")
-st.markdown("I siti bloccano i software? Risolviamo aprendo le ricerche direttamente nel tuo browser.")
+st.markdown("I siti bloccano i robot? Risolviamo aprendo le ricerche direttamente nel tuo browser.")
 
 SHOPS = {
     "Tannico": "https://www.tannico.it/catalogsearch/result/?q=",
@@ -14,26 +14,37 @@ SHOPS = {
     "Callmewine": "https://www.callmewine.com/catalogsearch/result/?q="
 }
 
-uploaded_file = st.file_uploader("Carica Excel (tutte le schede)", type=['xlsx'])
-manual_wine = st.text_input("Inserimento rapido")
+# Funzione per pulire il nome del vino
+def pulisci_nome(nome):
+    return str(nome).strip()
+
+uploaded_file = st.file_uploader("Carica Excel (legge tutte le schede)", type=['xlsx'])
+manual_wine = st.text_input("Inserimento rapido singola etichetta")
 
 vini = []
 if uploaded_file:
     fogli = pd.read_excel(uploaded_file, sheet_name=None)
-    for f in fogli.values():
-        vini.extend(f.iloc[:, 0].dropna().astype(str).tolist())
+    for nome_foglio, df in fogli.items():
+        if not df.empty:
+            # Prende la prima colonna di ogni foglio
+            vini.extend(df.iloc[:, 0].dropna().tolist())
+
 if manual_wine:
     vini.append(manual_wine)
 
 if vini:
-    vini = list(dict.fromkeys(vini))
-    st.success(f"Trovate {len(vini)} etichette. Clicca sui link per aprire la ricerca reale.")
+    vini = list(dict.fromkeys(vini)) # Rimuove duplicati
+    st.success(f"✅ Trovate {len(vini)} etichette totali da tutte le schede.")
     
+    # Creazione della tabella di controllo
     for v in vini:
-        with st.expander(f"🛒 Controlla prezzi per: {v}", expanded=True):
+        nome_v = pulisci_nome(v)
+        with st.expander(f"🛒 Confronta: {nome_v}", expanded=True):
             cols = st.columns(len(SHOPS))
             for i, (name, base_url) in enumerate(SHOPS.items()):
-                link = f"{base_url}{urllib.parse.quote(v)}"
-                cols[i].markdown(f"[Vai su **{name}**]({link})")
+                link = f"{base_url}{urllib.parse.quote(nome_v)}"
+                cols[i].markdown(f"**{name}**")
+                cols[i].link_button(f"Cerca su {name}", link)
 
-st.info("Consiglio: Usa il tasto destro del mouse e clicca 'Apri in una nuova scheda' sui nomi dei siti per confrontarli velocemente.")
+st.divider()
+st.info("💡 **Consiglio Pro:** Carica l'Excel e clicca sui pulsanti per aprire le schede. Il tuo browser non verrà mai bloccato perché la ricerca parte dal tuo indirizzo IP reale.")
