@@ -1,66 +1,47 @@
 import streamlit as st
 import pandas as pd
+import urllib.parse
 
-# Configurazione Pagina
-st.set_page_config(page_title="Ricerca Vino 2.0", layout="wide")
+st.set_page_config(page_title="VinoFinder 2.0", layout="wide")
 
-st.title("🍷 Ricerca Vino 2.0")
-st.markdown("Genera link di ricerca ottimizzati per ogni e-commerce.")
+st.title("🍷 Ricerca Vino 2.0 (Modalità Infallibile)")
+st.markdown("Questa versione usa la potenza di Google per trovare i vini direttamente dentro gli e-commerce scelti, superando ogni blocco.")
 
-# Funzione per creare URL compatibili con tutti i siti
-def crea_url(base, vino):
-    # Sostituiamo gli spazi con il simbolo '+' (più universale per i motori di ricerca)
-    vino_pulito = str(vino).strip().replace(" ", "+")
-    return f"{base}{vino_pulito}"
-
-# Configurazione URL base
+# Configurazione Siti
 shops = {
-    "Tannico": "https://www.tannico.it/catalogsearch/result/?q=",
-    "Bernabei": "https://www.bernabei.it/catalogsearch/result/?q=",
-    "Vino.com": "https://www.vino.com/search?q=",
-    "Callmewine": "https://www.callmewine.com/catalogsearch/result/?q="
+    "Tannico": "tannico.it",
+    "Bernabei": "bernabei.it",
+    "Vino.com": "vino.com",
+    "Callmewine": "callmewine.com"
 }
 
-# Interfaccia di Input
+# Funzione per creare il link di ricerca tramite Google
+def crea_google_link(site, vino):
+    query = f"site:{site} {vino}"
+    query_encoded = urllib.parse.quote(query)
+    return f"https://www.google.com/search?q={query_encoded}"
+
+# --- INTERFACCIA ---
 col1, col2 = st.columns(2)
-
 with col1:
-    st.subheader("🔍 Ricerca Singola")
     manual_wine = st.text_input("Inserisci etichetta (es: Sassicaia 2018)")
-
 with col2:
-    st.subheader("📂 Carica Lista")
-    uploaded_file = st.file_uploader("Carica Excel o CSV", type=['xlsx', 'csv'])
+    uploaded_file = st.file_uploader("Carica Excel", type=['xlsx', 'csv'])
 
-# Preparazione lista vini
-vini_da_cercare = []
-if manual_wine:
-    vini_da_cercare.append(manual_wine)
-
+vini = []
+if manual_wine: vini.append(manual_wine)
 if uploaded_file:
-    try:
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
-        vini_da_cercare.extend(df.iloc[:, 0].dropna().tolist())
-    except Exception as e:
-        st.error("Errore nel caricamento del file.")
+    df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith('.csv') else pd.read_excel(uploaded_file)
+    vini.extend(df.iloc[:, 0].dropna().tolist())
 
-# Visualizzazione Risultati
-if vini_da_cercare:
+if vini:
     st.divider()
-    
-    # Creiamo una colonna per ogni negozio
     cols = st.columns(len(shops))
     
-    for idx, (shop_name, base_url) in enumerate(shops.items()):
+    for idx, (shop_name, domain) in enumerate(shops.items()):
         with cols[idx]:
             st.subheader(shop_name)
-            for vino in vini_da_cercare:
-                link_finale = crea_url(base_url, vino)
-                # Visualizzazione pulita e cliccabile
-                st.markdown(f"✅ **[{vino}]({link_finale})**")
+            for v in vini:
+                link = crea_google_link(domain, v)
+                st.markdown(f"🔍 **[{v}]({link})**")
             st.divider()
-else:
-    st.info("Inizia inserendo un vino o caricando un file Excel.")
