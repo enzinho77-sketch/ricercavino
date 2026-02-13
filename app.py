@@ -3,10 +3,10 @@ import pandas as pd
 import urllib.parse
 import re
 
-st.set_page_config(page_title="VinoFinder Pro - Dashboard Acquisti", layout="wide")
+st.set_page_config(page_title="VinoFinder - Raggruppamento Acquisti", layout="wide")
 
-st.title("🍷 Dashboard Acquisti Raggruppata")
-st.markdown("Seleziona l'e-commerce in alto per vedere la tua lista pronta al click.")
+st.title("🍷 Raggruppamento per E-commerce")
+st.markdown("Scegli un negozio e clicca sui nomi. Se vedi 'Nessun risultato', passa subito al successivo.")
 
 def pulisci_nome_vino(nome):
     if not isinstance(nome, str): return ""
@@ -24,35 +24,24 @@ if uploaded_file:
     for df in dict_fogli.values():
         if not df.empty:
             vini_totali.extend(df.iloc[:, 0].dropna().astype(str).tolist())
-    vini_totali = list(dict.fromkeys(vini_totali))
-    st.sidebar.success(f"📦 {len(vini_totali)} vini caricati")
+    vini_totali = sorted(list(set(vini_totali)))
 
-# --- DASHBOARD RAGGRUPPATA PER E-COMMERCE ---
+# --- INTERFACCIA A TAB (RAGGRUPPATA) ---
 if vini_totali:
-    # Creiamo le schede per ogni negozio
-    tabs = st.tabs(["🛒 Tannico", "🛒 Bernabei", "🛒 Vino.com", "🛒 Callmewine", "🛒 XtraWine"])
+    # Selettore negozio per non avere mille tasti sparsi
+    negozio = st.selectbox("Seleziona l'e-commerce su cui vuoi acquistare ora:", 
+                           ["tannico.it", "bernabei.it", "vino.com", "callmewine.com"])
     
-    shops_config = [
-        {"name": "Tannico", "domain": "tannico.it", "tab": tabs[0]},
-        {"name": "Bernabei", "domain": "bernabei.it", "tab": tabs[1]},
-        {"name": "Vino.com", "domain": "vino.com", "tab": tabs[2]},
-        {"name": "Callmewine", "domain": "callmewine.com", "tab": tabs[3]},
-        {"name": "XtraWine", "domain": "xtrawine.com", "tab": tabs[4]},
-    ]
-
-    for shop in shops_config:
-        with shop["tab"]:
-            st.header(f"Lista pronta per {shop['name']}")
-            st.info(f"Clicca sui nomi per verificare la disponibilità su {shop['domain']}")
-            
-            # Layout a griglia per acquisti rapidi
-            cols = st.columns(3) 
-            for i, v in enumerate(vini_totali):
-                v_pulito = pulisci_nome_vino(v)
-                query = f'site:{shop["domain"]} "{v_pulito}"'
-                url = "https://www.google.com/search?q=" + urllib.parse.quote(query) + "&tbs=li:1"
-                
-                # Inseriamo i bottoni in colonna
-                cols[i % 3].link_button(f"{v_pulito}", url, use_container_width=True)
+    st.write(f"### Lista vini da cercare su {negozio}")
+    
+    # Griglia compatta per scansione rapida
+    cols = st.columns(4)
+    for i, v in enumerate(vini_totali):
+        v_p = pulisci_nome_vino(v)
+        query = f'site:{negozio} "{v_p}"'
+        url = "https://www.google.com/search?q=" + urllib.parse.quote(query) + "&tbs=li:1"
+        
+        # Il tasto apre la ricerca Sniper
+        cols[i % 4].link_button(v_p, url, use_container_width=True)
 else:
-    st.info("Carica l'Excel per generare le liste di acquisto raggruppate.")
+    st.info("Carica l'Excel per iniziare.")
